@@ -5936,12 +5936,14 @@ uint16_t mode_supercomputer(void)
   const uint16_t period = max(minTime, (uint16_t)map(SEGMENT.speed, 0, 255, 0, maxTime));
   const uint16_t fadeTime = period / 2 * SEGMENT.intensity / 255;
   const uint16_t holdTime = period / 2 - fadeTime;
-  const uint16_t halfDriftMax = period / 8;
+  const uint16_t offset = SEGMENT.custom2 * period;
 
   for (int i = 0; i < SEGLEN; ++i) {
-    const int16_t drift = map(inoise16(i * 26017 + (i * 193) % 256) * SEGMENT.custom1 / 255, 0, 65535, -halfDriftMax, halfDriftMax - 1) * strip.now / period;
-    const uint16_t offset = map(inoise16(i * 39563 + (i * 181) % 256) * SEGMENT.custom2 / 255, 0, 65535, -(period / 2), (period / 2) - 1);
-    const uint16_t cycleTime = (period + strip.now + drift + offset) % period;
+    // map(inoise16(i * 26017 + (i * 193) % 256)
+    // map(inoise16(i * 39563 + (i * 181) % 256)
+    const int16_t drift = map(inoise16(i * 26017 + (i * 193) % 256) * SEGMENT.custom1 / 255, 0, 65535, 0, period);
+    const uint32_t time = (strip.now + offset) * (period + drift) / period;
+    const uint16_t cycleTime = time % period;
     
     uint8_t value;
     // Fade in
@@ -5966,7 +5968,7 @@ uint16_t mode_supercomputer(void)
 
   return FRAMETIME;
 }
-static const char _data_FX_MODE_SUPERCOMPUTER[] PROGMEM = "Supercomputer@Speed,Fade,Drift,Offset;!;!;1;sx=31,ix=31,c1=31,c2=0";
+static const char _data_FX_MODE_SUPERCOMPUTER[] PROGMEM = "Supercomputer@Period,Fade,Drift,Offset;!;!;1;sx=31,ix=31,c1=31,c2=0";
 
 
 ///////////////////////////////////////////////////////////////////////////////
