@@ -5933,18 +5933,16 @@ uint16_t mode_supercomputer(void)
 {
   static const uint16_t minTime = 125;
   static const uint16_t maxTime = 16000;
-  const uint16_t period = max(minTime, (uint16_t)map(SEGMENT.speed, 0, 255, 0, maxTime));
-  const uint16_t fadeTime = period / 2 * SEGMENT.intensity / 255;
-  const uint16_t holdTime = period / 2 - fadeTime;
-  const uint16_t offset = SEGMENT.custom2 * period;
+  const uint16_t nominalPeriod = max(minTime, (uint16_t)map(SEGMENT.speed, 0, 255, 0, maxTime));
+  const uint16_t offset = SEGMENT.custom2 * nominalPeriod;
 
   for (int i = 0; i < SEGLEN; ++i) {
-    // map(inoise16(i * 26017 + (i * 193) % 256)
-    // map(inoise16(i * 39563 + (i * 181) % 256)
-    const int16_t drift = map(inoise16(i * 26017 + (i * 193) % 256) * SEGMENT.custom1 / 255, 0, 65535, 0, period);
-    const uint32_t time = (strip.now + offset) * (period + drift) / period;
-    const uint16_t cycleTime = time % period;
-    
+    const int16_t drift = map((inoise16(i * i * 26017 + i * 193) - 32767) * SEGMENT.custom1 / 255, -32768, 32767, -(nominalPeriod / 2), (nominalPeriod / 2) - 1);
+    const uint16_t actualPeriod = nominalPeriod + drift;
+    const uint16_t fadeTime = actualPeriod / 2 * SEGMENT.intensity / 255;
+    const uint16_t holdTime = actualPeriod / 2 - fadeTime;
+    const uint16_t cycleTime = (strip.now + offset) % actualPeriod;
+
     uint8_t value;
     // Fade in
     if (cycleTime < fadeTime) {
