@@ -5928,7 +5928,9 @@ static const char _data_FX_MODE_2DDRIFTROSE[] PROGMEM = "Drift Rose@Fade,Blur;;;
 
 #endif // WLED_DISABLE_2D
 
-
+/*
+ * Flashing LEDs drift out of sync.
+ */
 uint16_t mode_supercomputer(void)
 {
   static const uint16_t minTime = 125;
@@ -5936,37 +5938,29 @@ uint16_t mode_supercomputer(void)
   const uint16_t nominalPeriod = max(minTime, (uint16_t)map(SEGMENT.speed, 0, 255, 0, maxTime));
   const uint16_t offset = SEGMENT.custom2 * nominalPeriod;
 
-  for (int i = 0; i < SEGLEN; ++i) {
+  for (int i = 0; i < SEGLEN; i++) {
     const int16_t drift = map((inoise16(i * i * 26017 + i * 193) - 32767) * SEGMENT.custom1 / 255, -32768, 32767, -(nominalPeriod / 2), (nominalPeriod / 2) - 1);
     const uint16_t actualPeriod = nominalPeriod + drift;
-    const uint16_t fadeTime = actualPeriod / 2 * SEGMENT.intensity / 255;
+    const uint16_t fadeTime = SEGMENT.intensity > 0 ? actualPeriod / 2 * SEGMENT.intensity / 255 : 0;
     const uint16_t holdTime = actualPeriod / 2 - fadeTime;
     const uint16_t cycleTime = (strip.now + offset) % actualPeriod;
 
     uint8_t value;
     // Fade in
-    if (cycleTime < fadeTime) {
-      value = cycleTime * 255 / fadeTime;
-    }
+    if (cycleTime < fadeTime) value = cycleTime * 255 / fadeTime;
     // Hold on
-    else if (cycleTime < fadeTime + holdTime) {
-      value = 255;
-    }
+    else if (cycleTime < fadeTime + holdTime) value = 255;
     // Fade out
-    else if (cycleTime < 2 * fadeTime + holdTime) {
-      value = 255 - (cycleTime - (fadeTime + holdTime)) * 255 / fadeTime;
-    }
+    else if (cycleTime < 2 * fadeTime + holdTime) value = 255 - (cycleTime - (fadeTime + holdTime)) * 255 / fadeTime;
     // Hold off
-    else {
-      value = 0;
-    }
+    else value = 0;
 
     SEGMENT.setPixelColor(i, SEGMENT.color_from_palette(value, false, false, 0));
   }
 
   return FRAMETIME;
 }
-static const char _data_FX_MODE_SUPERCOMPUTER[] PROGMEM = "Supercomputer@Period,Fade,Drift,Offset;!;!;1;sx=31,ix=31,c1=31,c2=0";
+static const char _data_FX_MODE_SUPERCOMPUTER[] PROGMEM = "Supercomputer@Period,Fade,Drift,Offset;!,!;!;1;sx=31,ix=31,c1=31,c2=0";
 
 
 ///////////////////////////////////////////////////////////////////////////////
